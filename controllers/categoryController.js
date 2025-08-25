@@ -39,3 +39,22 @@ exports.getBlogsByCategory = async (req, res) => {
     res.status(500).json({ msg: "Server error" });
   }
 };
+
+// Get blogs by category name
+exports.getBlogsByCategoryName = async (req, res) => {
+  try {
+    const { name } = req.params;
+
+    // case-insensitive match
+    const blogs = await Blog.find({ category: new RegExp(`^${name}$`, "i") });
+
+    if (!blogs || blogs.length === 0) {
+      return res.status(404).json({ msg: "No blogs found for this category" });
+    }
+
+    res.json(blogs);
+  } catch (err) {
+    console.error("Error fetching blogs by category:", err);
+    res.status(500).json({ msg: "Server error" });
+  }
+};

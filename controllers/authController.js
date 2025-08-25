@@ -40,10 +40,9 @@ exports.register = async (req, res) => {
     if (user) return res.status(400).json({ msg: "User already exists" });
 
     // hash password
-    const bcrypt = require("bcryptjs");
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // create user (role defaults to "reader")
+    // create user
     user = new User({
       username,
       email,
@@ -53,7 +52,13 @@ exports.register = async (req, res) => {
 
     await user.save();
 
-    res.json({ msg: "✅ User registered successfully" });
+    // generate JWT token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    // return token along with message
+    res.status(201).json({ msg: "✅ User registered successfully", token });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: "Server error" });

@@ -8,10 +8,10 @@ const blogSchema = new mongoose.Schema(
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      // required: true,
     },
     authorProfileImage: { type: String },
-    category: { type: mongoose.Schema.Types.ObjectId, ref: "Category" }, // ✅ link blog to category
+    category: { type: String, required: true }, // ✅ link blog to category
   },
   { timestamps: true }
 );

@@ -15,7 +15,10 @@ router.post(
 // Get all categories
 router.get("/", categoryController.getCategories);
 
-// ✅ Get blogs by category
+// ✅ Put this first (more specific)
+router.get("/category/:name", categoryController.getBlogsByCategoryName);
+
+// ✅ This comes after (generic)
 router.get("/:id/blogs", categoryController.getBlogsByCategory);
 
 module.exports = router;
