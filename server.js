@@ -2,7 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 const categoryRoutes = require("./routes/categoryRoutes");
-const cors = require("cors"); // ✅ import CORS
+const cors = require("cors");
 
 dotenv.config();
 connectDB();
@@ -12,22 +12,20 @@ const app = express();
 // ✅ CORS middleware
 app.use(
   cors({
-    origin: "http://localhost:5173", // allow your frontend
+    origin: "http://localhost:5173", // adjust if frontend deployed elsewhere
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
 
-// Body parser middleware
-app.use(express.json()); // parses JSON body
-app.use(express.urlencoded({ extended: true })); // parses form-urlencoded
+// ✅ Body parsers
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// ✅ Routes
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/blogs", require("./routes/blogRoutes"));
 app.use("/api/categories", categoryRoutes);
-// In app.js or server.js
-app.use("/uploads", express.static("uploads"));
 
 app.get("/", (req, res) => {
   res.send("🚀 Blog API running...");

@@ -14,7 +14,7 @@ const upload = multer({ storage });
 
 // ✅ Public routes (anyone can read blogs)
 router.get("/", blogController.getAllBlogs);
-router.get("/:id", blogController.getBlogById);
+router.get("/:slug", blogController.getBlogBySlug);
 router.post("/create", upload.single("cover"), blogController.createBlog);
 
 // ✅ Protected routes (only admins can create, update, delete)
