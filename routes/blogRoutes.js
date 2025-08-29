@@ -1,25 +1,22 @@
 // routes/blogRoutes.js
 const express = require("express");
-const multer = require("multer");
-
 const router = express.Router();
 const blogController = require("../controllers/blogController");
 const authMiddleware = require("../middleware/authMiddleware");
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
 
-const upload = multer({ storage });
+// Use the upload middleware from the controller (memory storage)
+router.post(
+  "/create",
+  blogController.uploadCover, // multer memory storage
+  blogController.createBlog
+);
 
-// ✅ Public routes (anyone can read blogs)
+// ✅ Public routes
 router.get("/", blogController.getAllBlogs);
 router.get("/:slug", blogController.getBlogBySlug);
-router.post("/create", upload.single("cover"), blogController.createBlog);
 
-// ✅ Protected routes (only admins can create, update, delete)
-// router.post("/create", blogController.createBlog);
+// ✅ Protected routes (only admins can update/delete)
 router.put("/:id", authMiddleware(["admin"]), blogController.updateBlog);
-router.delete("/:id", authMiddleware(["admin"]), blogController.deleteBlog);
+router.delete("/:slug", blogController.deleteBlog);
 
 module.exports = router;
