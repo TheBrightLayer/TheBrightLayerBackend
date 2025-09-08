@@ -27,6 +27,10 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/blogs", require("./routes/blogRoutes"));
 app.use("/api/categories", categoryRoutes);
 
+// ✅ Employee routes (EMS)
+const employeeRoutes = require("./routes/employeeRoutes");
+app.use("/api/employees", employeeRoutes);
+
 app.get("/", (req, res) => {
   res.send("🚀 Blog API running...");
 });
