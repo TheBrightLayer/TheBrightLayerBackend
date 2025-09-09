@@ -1,0 +1,165 @@
+openapi: 3.0.0
+info:
+  title: EMS + Blog API
+  version: 1.0.0
+  description: API documentation for Employee Management System and Blog
+servers:
+  - url: http://localhost:5000
+
+tags:
+  - name: Employees
+    description: Employee management APIs
+  - name: Tasks
+    description: Task assignment and tracking APIs
+  - name: ChangeLog
+    description: Employee change history APIs
+
+paths:
+  /api/employees:
+    get:
+      summary: Get all employees
+      tags: [Employees]
+      responses:
+        "200":
+          description: List of employees
+    post:
+      summary: Create a new employee
+      tags: [Employees]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+              properties:
+                name:
+                  type: string
+                  example: Akshit Verma
+                email:
+                  type: string
+                  example: akshit@example.com
+                phone:
+                  type: string
+                  example: 9876543210
+                department:
+                  type: string
+                  example: IT
+                role:
+                  type: string
+                  example: Employee
+      responses:
+        "201":
+          description: Employee created successfully
+
+  /api/employees/{id}:
+    get:
+      summary: Get employee by ID
+      tags: [Employees]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Employee details
+    put:
+      summary: Update employee by ID
+      tags: [Employees]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                phone:
+                  type: string
+                department:
+                  type: string
+                role:
+                  type: string
+      responses:
+        "200":
+          description: Employee updated successfully
+    delete:
+      summary: Delete employee by ID
+      tags: [Employees]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Employee deleted successfully
+
+  /api/tasks:
+    get:
+      summary: Get all tasks
+      tags: [Tasks]
+      responses:
+        "200":
+          description: List of tasks
+    post:
+      summary: Create a new task
+      tags: [Tasks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - assignedTo
+              properties:
+                title:
+                  type: string
+                  example: Prepare Quarterly Report
+                description:
+                  type: string
+                  example: Compile and analyze Q3 sales data
+                priority:
+                  type: string
+                  enum: [High, Medium, Low]
+                  example: High
+                dueDate:
+                  type: string
+                  format: date
+                  example: 2025-09-20
+                assignedTo:
+                  type: string
+                  example: 68be8c526192822dd32608cf
+      responses:
+        "201":
+          description: Task created successfully
+
+  /api/changelog/{employeeId}:
+    get:
+      summary: Get change logs for an employee
+      tags: [ChangeLog]
+      parameters:
+        - in: path
+          name: employeeId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of change logs
