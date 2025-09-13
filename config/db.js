@@ -1,15 +1,17 @@
-// db.js
-const mongoose = require("mongoose");
+// config/db.js
+const nano = require("nano");
 
-const connectDB = async () => {
+let couch;
+
+const connectDB = () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log("✅ MongoDB Atlas connected successfully");
+    // CouchDB connection (using env vars)
+    couch = nano(process.env.COUCHDB_URL); // e.g. http://admin:password@127.0.0.1:5984
+
+    console.log("✅ Connected to CouchDB");
+    return couch;
   } catch (error) {
-    console.error("❌ MongoDB Atlas connection failed:", error.message);
+    console.error("❌ CouchDB connection error:", error.message);
     process.exit(1);
   }
 };
