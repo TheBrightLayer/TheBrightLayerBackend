@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const slugify = require("slugify");
 
+//Meta title and meta description
 const blogSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },

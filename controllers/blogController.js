@@ -1,40 +1,41 @@
-// controllers/blogController.js
-const Blog = require("../models/Blog");
-const translateText = require("../utils/translateText"); // translation utility
+const slugify = require("slugify");
+const translateText = require("../utils/translateText");
 const multer = require("multer");
+const nano = require("nano")(process.env.COUCHDB_URL);
 
-// ---------- Multer setup for handling cover image ----------
+// Database reference
+const blogDB = nano.db.use("blog");
+
+// ---------- Multer setup ----------
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
-
-// Middleware to handle 'cover' file
 exports.uploadCover = upload.single("cover");
 
 // --------------------- GET ALL BLOGS ---------------------
+// supports pagination & category filter
 exports.getAllBlogs = async (req, res) => {
   try {
-    const { category, limit } = req.query;
-    const query = category ? { category } : {};
-    let blogs = await Blog.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit ? parseInt(limit) : 0);
+    const { category, limit = 10, skip = 0 } = req.query;
 
+    const selector = { type: "blog" };
+    if (category) selector.category = category;
+
+    const result = await blogDB.find({
+      selector,
+      sort: [{ createdAt: "desc" }],
+      limit: parseInt(limit),
+      skip: parseInt(skip),
+    });
+
+    // Translate blogs
     const translatedBlogs = await Promise.all(
-      blogs.map(async (blog) => {
+      result.docs.map(async (blog) => {
         try {
           const translatedTitle = await translateText(blog.title, "en", "hi");
-          const translatedContent = await translateText(
-            blog.content,
-            "en",
-            "hi"
-          );
-          return {
-            ...blog._doc,
-            title: translatedTitle,
-            content: translatedContent,
-          };
-        } catch (error) {
-          console.error("Error translating blog:", error);
+          const translatedContent = await translateText(blog.content, "en", "hi");
+          return { ...blog, title: translatedTitle, content: translatedContent };
+        } catch (err) {
+          console.error("Translation error:", err);
           return blog;
         }
       })
@@ -50,29 +51,26 @@ exports.getAllBlogs = async (req, res) => {
 // --------------------- GET BLOG BY SLUG ---------------------
 exports.getBlogBySlug = async (req, res) => {
   const { lang = "en" } = req.query;
-
   try {
-    const blog = await Blog.findOne({ slug: req.params.slug });
-    if (!blog) return res.status(404).json({ msg: "Blog not found" });
+    const result = await blogDB.find({ selector: { slug: req.params.slug, type: "blog" } });
+    if (!result.docs.length) return res.status(404).json({ msg: "Blog not found" });
+
+    const blog = result.docs[0];
 
     if (lang === "hi") {
       try {
         const translatedTitle = await translateText(blog.title, "en", "hi");
         const translatedContent = await translateText(blog.content, "en", "hi");
-        const translatedCategory = await translateText(
-          blog.category,
-          "en",
-          "hi"
-        );
+        const translatedCategory = await translateText(blog.category, "en", "hi");
 
         return res.json({
-          ...blog.toObject(),
+          ...blog,
           title: translatedTitle,
           content: translatedContent,
           category: translatedCategory,
         });
-      } catch (error) {
-        console.error("Error translating blog by slug:", error);
+      } catch (err) {
+        console.error("Translation error:", err);
         return res.json(blog);
       }
     }
@@ -87,39 +85,62 @@ exports.getBlogBySlug = async (req, res) => {
 // --------------------- CREATE BLOG ---------------------
 exports.createBlog = async (req, res) => {
   try {
-    const { title, content, category, tags } = req.body;
+    const { title, content, category, tags, metaTitle, metaDescription } = req.body;
+
+    // Generate unique slug
+    let baseSlug = slugify(title, { lower: true, strict: true });
+    let slug = baseSlug;
+    let counter = 1;
+
+    let existing = await blogDB.find({ selector: { slug } });
+    while (existing.docs.length > 0) {
+      slug = `${baseSlug}-${counter++}`;
+      existing = await blogDB.find({ selector: { slug } });
+    }
 
     let imageBase64 = null;
     if (req.file && req.file.buffer) {
-      imageBase64 = `data:${
-        req.file.mimetype
-      };base64,${req.file.buffer.toString("base64")}`;
+      imageBase64 = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
     }
 
-    const newBlog = new Blog({
+    const newBlog = {
+      _id: `blog:${slug}`,
+      type: "blog",
       title,
       content,
       category,
+      slug,
       tags: tags ? JSON.parse(tags) : [],
       mainImage: imageBase64,
-    });
+      metaTitle,
+      metaDescription,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-    await newBlog.save();
-    res.status(201).json(newBlog);
+    const response = await blogDB.insert(newBlog);
+    res.status(201).json({ ...newBlog, _rev: response.rev });
   } catch (err) {
-    console.error("CreateBlog Error:", err.message, err);
-    res.status(500).json({ msg: "Server error", error: err.message });
+    console.error("CreateBlog Error:", err);
+    res.status(500).json({ msg: "Server error" });
   }
 };
 
 // --------------------- UPDATE BLOG ---------------------
 exports.updateBlog = async (req, res) => {
   try {
-    const updatedBlog = await Blog.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
-    if (!updatedBlog) return res.status(404).json({ msg: "Blog not found" });
-    res.json(updatedBlog);
+    const { id } = req.params;
+    const existing = await blogDB.get(id);
+    if (!existing) return res.status(404).json({ msg: "Blog not found" });
+
+    const updatedBlog = {
+      ...existing,
+      ...req.body,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const response = await blogDB.insert(updatedBlog);
+    res.json({ ...updatedBlog, _rev: response.rev });
   } catch (err) {
     console.error("UpdateBlog Error:", err);
     res.status(500).json({ msg: "Server error" });
@@ -127,18 +148,17 @@ exports.updateBlog = async (req, res) => {
 };
 
 // --------------------- DELETE BLOG ---------------------
-// controllers/blogController.js
 exports.deleteBlog = async (req, res) => {
   try {
-    const blog = await Blog.findOneAndDelete({ slug: req.params.slug });
+    const result = await blogDB.find({ selector: { slug: req.params.slug, type: "blog" } });
+    if (!result.docs.length) return res.status(404).json({ msg: "Blog not found" });
 
-    if (!blog) {
-      return res.status(404).json({ message: "Blog not found" });
-    }
+    const blog = result.docs[0];
+    await blogDB.destroy(blog._id, blog._rev);
 
     res.json({ message: "Blog deleted successfully" });
   } catch (err) {
+    console.error("DeleteBlog Error:", err);
     res.status(500).json({ error: err.message });
   }
 };
-

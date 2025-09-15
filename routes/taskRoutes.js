@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { createTask, getAllTasks, getTaskById, updateTeskById, deleteTask } = require("../controllers/taskController");
+const { createTask, getAllTasks, getTaskById, updateTaskById, deleteTask } = require("../controllers/taskController");
 
 // POST create task
 router.post("/", createTask);
@@ -12,7 +12,7 @@ router.get("/", getAllTasks);
 router.get("/:id",getTaskById);
 
 // PUT task by ID
-router.put("/:id",updateTeskById);
+router.put("/:id",updateTaskById);
 
 // DELETE task by ID
 router.delete("/:id",deleteTask);
